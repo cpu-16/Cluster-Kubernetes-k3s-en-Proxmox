@@ -118,7 +118,6 @@ network:
       nameservers:
         addresses: [1.1.1.1, 8.8.8.8]
 ```
-![VMs en Proxmox](docs/img/proxmox-vms.png)
 
 **Notas:**
 
@@ -156,7 +155,6 @@ Contenido:
 ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
 ```
-![VMs en Proxmox](docs/img/proxmox-vms.png)
 
 En cada nodo, ajustar la línea `127.0.1.1` al hostname local correspondiente.
 
@@ -191,7 +189,7 @@ Verificar servicio:
 ```bash
 sudo systemctl status k3s
 ```
-![VMs en Proxmox](docs/img/proxmox-vms.png)
+![Estado de k3s](images/status_k3s.png)
 
 Ver nodos (de momento solo el master):
 ```bash
