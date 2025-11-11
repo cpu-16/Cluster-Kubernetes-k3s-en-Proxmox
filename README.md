@@ -25,10 +25,10 @@ Este documento describe paso a paso cómo monté un cluster **Kubernetes (k3s)**
 ### 1.2. IPs y hostnames
 
 | Rol     | Hostname     | IP              |
-|--------|--------------|-----------------|
-| Master | `k8s-master` | `172.25.205.116` |
-| Worker | `k8s-worker1`| `172.25.205.117` |
-| Worker | `k8s-worker2`| `172.25.205.118` |
+|---------|--------------|-----------------|
+| Master  | `k8s-master` | `172.25.205.116` |
+| Worker  | `k8s-worker1`| `172.25.205.117` |
+| Worker  | `k8s-worker2`| `172.25.205.118` |
 
 > Ajustar las IPs según la red de tu laboratorio.
 
@@ -63,23 +63,23 @@ Todos los pasos de esta sección se realizan **en cada VM** (master y workers), 
 ### 3.1. Crear usuario administrador
 
 Ejemplo de usuario: `masteradmin` (puede ser cualquier nombre).
-
 ```bash
 # Crear usuario
 sudo adduser masteradmin
 
 # Darle permisos de sudo
 sudo usermod -aG sudo masteradmin
+```
+
 Iniciar sesión con ese usuario:
-
-bash
-Copiar código
+```bash
 su - masteradmin
-3.2. Cambiar hostname
-En cada VM:
+```
 
-bash
-Copiar código
+### 3.2. Cambiar hostname
+
+En cada VM:
+```bash
 # En el master
 sudo hostnamectl set-hostname k8s-master
 
@@ -88,19 +88,23 @@ sudo hostnamectl set-hostname k8s-worker1
 
 # En el worker 2
 sudo hostnamectl set-hostname k8s-worker2
+```
+
 Cerrar sesión y volver a entrar para ver el cambio en el prompt.
 
-4. Configuración de red (IP estática + hosts)
-4.1. IP estática con Netplan (ejemplo master)
-Archivo: /etc/netplan/90-default.yaml
+---
 
-bash
-Copiar código
+## 4. Configuración de red (IP estática + hosts)
+
+### 4.1. IP estática con Netplan (ejemplo master)
+
+Archivo: `/etc/netplan/90-default.yaml`
+```bash
 sudo nano /etc/netplan/90-default.yaml
-Contenido para el master (k8s-master):
+```
 
-yaml
-Copiar código
+Contenido para el master (`k8s-master`):
+```yaml
 network:
   version: 2
   renderer: networkd
@@ -113,32 +117,32 @@ network:
       gateway4: 172.25.205.2
       nameservers:
         addresses: [1.1.1.1, 8.8.8.8]
-Notas:
+```
+![VMs en Proxmox](docs/img/proxmox-vms.png)
 
-La interfaz puede ser ens18, enp0s18, etc. Ver con ip a.
+**Notas:**
 
-gateway4 debe coincidir con la puerta de enlace de tu red (ip route | grep default).
+- La interfaz puede ser `ens18`, `enp0s18`, etc. Ver con `ip a`.
+- `gateway4` debe coincidir con la puerta de enlace de tu red (`ip route | grep default`).
 
 Aplicar cambios:
-
-bash
-Copiar código
+```bash
 sudo netplan apply
 ip a     # Verificar IP
+```
+
 Para los workers, se repite el proceso cambiando solo la IP:
 
-k8s-worker1 → 172.25.205.117/24
+- `k8s-worker1` → `172.25.205.117/24`
+- `k8s-worker2` → `172.25.205.118/24`
 
-k8s-worker2 → 172.25.205.118/24
-
-4.2. Archivo /etc/hosts (en todos los nodos)
-bash
-Copiar código
+### 4.2. Archivo `/etc/hosts` (en todos los nodos)
+```bash
 sudo nano /etc/hosts
-Contenido:
+```
 
-text
-Copiar código
+Contenido:
+```text
 127.0.0.1   localhost
 127.0.1.1   k8s-master   # En el master
 # 127.0.1.1 k8s-worker1  # En worker1, adaptarlo
@@ -151,13 +155,17 @@ Copiar código
 ::1     localhost ip6-localhost ip6-loopback
 ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
-En cada nodo, ajustar la línea 127.0.1.1 al hostname local correspondiente.
+```
+![VMs en Proxmox](docs/img/proxmox-vms.png)
 
-5. Desactivar swap (requisito de Kubernetes)
+En cada nodo, ajustar la línea `127.0.1.1` al hostname local correspondiente.
+
+---
+
+## 5. Desactivar swap (requisito de Kubernetes)
+
 En cada nodo:
-
-bash
-Copiar código
+```bash
 # Desactivar swap en la sesión actual
 sudo swapoff -a
 
@@ -166,187 +174,238 @@ sudo sed -i '/ swap / s/^/#/' /etc/fstab
 
 # Verificar
 free -h   # La columna Swap debe estar en 0
-6. Instalación de k3s
-6.1. Instalar k3s en el master
-En k8s-master:
+```
 
-bash
-Copiar código
+---
+
+## 6. Instalación de k3s
+
+### 6.1. Instalar k3s en el master
+
+En `k8s-master`:
+```bash
 curl -sfL https://get.k3s.io | sh -
+```
+
 Verificar servicio:
-
-bash
-Copiar código
+```bash
 sudo systemctl status k3s
+```
+![VMs en Proxmox](docs/img/proxmox-vms.png)
+
 Ver nodos (de momento solo el master):
-
-bash
-Copiar código
+```bash
 sudo kubectl get nodes
-6.2. Obtener el token del cluster
+```
+
+### 6.2. Obtener el token del cluster
+
 En el master:
-
-bash
-Copiar código
+```bash
 sudo cat /var/lib/rancher/k3s/server/node-token
+```
+
 Guardar ese token: se usará para unir los workers.
+
 Ejemplo de formato (NO usar este literal):
-
-text
-Copiar código
+```text
 K10a1b2c3d4e5f6g7h8i9j0k.lmnopqrstuvwxyz
-6.3. Unir los workers al cluster
-En cada worker (k8s-worker1 y k8s-worker2), ejecutar:
+```
 
-bash
-Copiar código
+### 6.3. Unir los workers al cluster
+
+En cada worker (`k8s-worker1` y `k8s-worker2`), ejecutar:
+```bash
 curl -sfL https://get.k3s.io | \
   K3S_URL=https://172.25.205.116:6443 \
   K3S_TOKEN=K10a1b2c3d4e5f6g7h8i9j0k.lmnopqrstuvwxyz \
   sh -
+```
+
 Verificar que el agente está arriba:
-
-bash
-Copiar código
+```bash
 sudo systemctl status k3s-agent
-6.4. Ver el cluster completo desde el master
-En k8s-master:
+```
+![VMs en Proxmox](docs/img/proxmox-vms.png)
 
-bash
-Copiar código
+### 6.4. Ver el cluster completo desde el master
+
+En `k8s-master`:
+```bash
 sudo kubectl get nodes
-Salida esperada (similar a):
+```
 
-text
-Copiar código
+Salida esperada (similar a):
+```text
 NAME          STATUS   ROLES                  AGE   VERSION
 k8s-master    Ready    control-plane,master   XXm   v1.33.5+k3s1
 k8s-worker1   Ready    <none>                 YYm   v1.33.5+k3s1
 k8s-worker2   Ready    <none>                 ZZm   v1.33.5+k3s1
-7. Configurar kubectl para el usuario normal
-7.1. Copiar kubeconfig a ~/.kube/config
-En el master, con el usuario masteradmin:
+```
 
-bash
-Copiar código
+---
+
+## 7. Configurar kubectl para el usuario normal
+
+### 7.1. Copiar kubeconfig a `~/.kube/config`
+
+En el master, con el usuario `masteradmin`:
+```bash
 mkdir -p ~/.kube
 sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
 sudo chown $(id -u):$(id -g) ~/.kube/config
-7.2. Ajustar permisos del kubeconfig global (opcional pero útil)
-bash
-Copiar código
-sudo chmod 644 /etc/rancher/k3s/k3s.yaml
-7.3. Probar kubectl sin sudo
-bash
-Copiar código
-kubectl get nodes
-8. Etiquetar nodos (roles worker)
-Por defecto, los workers aparecen sin rol.
-Desde el master:
+```
 
-bash
-Copiar código
+### 7.2. Ajustar permisos del kubeconfig global (opcional pero útil)
+```bash
+sudo chmod 644 /etc/rancher/k3s/k3s.yaml
+```
+
+### 7.3. Probar kubectl sin sudo
+```bash
+kubectl get nodes
+```
+
+---
+
+## 8. Etiquetar nodos (roles worker)
+
+Por defecto, los workers aparecen sin rol.
+
+Desde el master:
+```bash
 kubectl label node k8s-worker1 node-role.kubernetes.io/worker=worker
 kubectl label node k8s-worker2 node-role.kubernetes.io/worker=worker
-Ver etiquetas:
+```
 
-bash
-Copiar código
+Ver etiquetas:
+```bash
 kubectl get nodes --show-labels
-9. Primer namespace y primer Deployment
-9.1. Crear namespace de pruebas
-bash
-Copiar código
+```
+
+---
+
+## 9. Primer namespace y primer Deployment
+
+### 9.1. Crear namespace de pruebas
+```bash
 kubectl create namespace demo-web
 kubectl get namespaces
-9.2. Crear Deployment de Nginx
-bash
-Copiar código
+```
+![VMs en Proxmox](docs/img/proxmox-vms.png)
+
+### 9.2. Crear Deployment de Nginx
+```bash
 kubectl create deployment nginx-demo \
   --image=nginx \
   --replicas=3 \
   -n demo-web
+```
+
 Ver pods y en qué nodo corren:
-
-bash
-Copiar código
+```bash
 kubectl get pods -n demo-web -o wide
-Salida ejemplo:
+```
 
-text
-Copiar código
+Salida ejemplo:
+```text
 NAME                         READY   STATUS    RESTARTS   AGE   IP          NODE
 nginx-demo-xxxxx-qqzxp       1/1     Running   0          2m    10.42.1.3   k8s-worker1
 nginx-demo-xxxxx-jx8rj       1/1     Running   0          2m    10.42.2.3   k8s-worker2
 nginx-demo-xxxxx-nfzwd       1/1     Running   0          2m    10.42.2.4   k8s-worker2
-10. Exponer el Deployment con un Service NodePort
-10.1. Crear el Service
-bash
-Copiar código
+```
+![VMs en Proxmox](docs/img/proxmox-vms.png)
+
+---
+
+## 10. Exponer el Deployment con un Service NodePort
+
+### 10.1. Crear el Service
+```bash
 kubectl expose deployment nginx-demo \
   --type=NodePort \
   --port=80 \
   -n demo-web
+```
+
 Ver servicios:
-
-bash
-Copiar código
+```bash
 kubectl get svc -n demo-web
-Ejemplo de salida:
+```
 
-text
-Copiar código
+Ejemplo de salida:
+```text
 NAME         TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
 nginx-demo   NodePort   10.43.29.57    <none>        80:31969/TCP   7m
-80 → puerto interno del servicio dentro del cluster.
+```
 
-31969 → NodePort abierto en cada nodo.
+- `80` → puerto interno del servicio dentro del cluster.
+- `31969` → NodePort abierto en cada nodo.
+![VMs en Proxmox](docs/img/proxmox-vms.png)
 
-10.2. Probar desde el navegador
+### 10.2. Probar desde el navegador
+
 Obtener IPs de los nodos:
-
-bash
-Copiar código
+```bash
 kubectl get nodes -o wide
-Desde cualquier máquina en la misma red que las VMs (por ejemplo, el equipo físico):
+```
 
-text
-Copiar código
+Desde cualquier máquina en la misma red que las VMs (por ejemplo, el equipo físico):
+```text
 http://172.25.205.117:31969   # k8s-worker1
 http://172.25.205.118:31969   # k8s-worker2
-Debería mostrarse la página por defecto de Nginx (“Welcome to nginx!”).
+```
 
-11. Operaciones básicas sobre el Deployment
-11.1. Ver todos los recursos del namespace
-bash
-Copiar código
+Debería mostrarse la página por defecto de Nginx ("Welcome to nginx!").
+
+---
+
+## 11. Operaciones básicas sobre el Deployment
+
+### 11.1. Ver todos los recursos del namespace
+```bash
 kubectl get all -n demo-web
-11.2. Escalar el Deployment
-Subir de 3 a 5 réplicas:
+```
+![VMs en Proxmox](docs/img/proxmox-vms.png)
 
-bash
-Copiar código
+### 11.2. Escalar el Deployment
+
+Subir de 3 a 5 réplicas:
+```bash
 kubectl scale deployment/nginx-demo --replicas=5 -n demo-web
 kubectl get pods -n demo-web -o wide
-Bajar a 2 réplicas:
+```
 
-bash
-Copiar código
+Bajar a 2 réplicas:
+```bash
 kubectl scale deployment/nginx-demo --replicas=2 -n demo-web
 kubectl get pods -n demo-web -o wide
-11.3. Eliminar recursos
+```
+
+### 11.3. Eliminar recursos
+
 Borrar solo el Service (NodePort):
-
-bash
-Copiar código
+```bash
 kubectl delete svc nginx-demo -n demo-web
+```
+
 Borrar el Deployment (y sus pods):
-
-bash
-Copiar código
+```bash
 kubectl delete deployment nginx-demo -n demo-web
-Borrar todo el namespace de pruebas:
+```
 
-bash
-Copiar código
+Borrar todo el namespace de pruebas:
+```bash
 kubectl delete namespace demo-web
+```
+
+---
+
+## 🎉 ¡Listo!
+
+Ya tienes un cluster k3s funcional con:
+- ✅ 1 master y 2 workers
+- ✅ Nginx desplegado y expuesto
+- ✅ Operaciones básicas de escalado
+
+**¡Happy clustering!** 🚀
