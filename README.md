@@ -1,4 +1,3 @@
-# Cluster-Kubernetes-k3s-en-Proxmox
 # Cluster Kubernetes (k3s) en Proxmox con 1 master y 2 workers
 
 Este documento describe paso a paso cómo monté un cluster **Kubernetes (k3s)** sobre **Proxmox**, con:
