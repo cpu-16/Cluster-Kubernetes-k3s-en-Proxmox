@@ -159,6 +159,7 @@ ff02::2 ip6-allrouters
 En cada nodo, ajustar la línea `127.0.1.1` al hostname local correspondiente.
 
 ---
+![Hosts master y worker](images/hosts.png)
 
 ## 5. Desactivar swap (requisito de Kubernetes)
 
@@ -224,7 +225,7 @@ Verificar que el agente está arriba:
 ```bash
 sudo systemctl status k3s-agent
 ```
-![VMs en Proxmox](docs/img/proxmox-vms.png)
+![Estado del primer agente en el worker1](images/status_agent.png)
 
 ### 6.4. Ver el cluster completo desde el master
 
@@ -312,7 +313,7 @@ nginx-demo-xxxxx-qqzxp       1/1     Running   0          2m    10.42.1.3   k8s-
 nginx-demo-xxxxx-jx8rj       1/1     Running   0          2m    10.42.2.3   k8s-worker2
 nginx-demo-xxxxx-nfzwd       1/1     Running   0          2m    10.42.2.4   k8s-worker2
 ```
-![VMs en Proxmox](docs/img/proxmox-vms.png)
+![Visualización de los pods](images/pods.png)
 
 ---
 
@@ -339,7 +340,7 @@ nginx-demo   NodePort   10.43.29.57    <none>        80:31969/TCP   7m
 
 - `80` → puerto interno del servicio dentro del cluster.
 - `31969` → NodePort abierto en cada nodo.
-![VMs en Proxmox](docs/img/proxmox-vms.png)
+![Exponiendo NodePort](images/nodeport.png)
 
 ### 10.2. Probar desde el navegador
 
@@ -356,6 +357,7 @@ http://172.25.205.118:31969   # k8s-worker2
 
 Debería mostrarse la página por defecto de Nginx ("Welcome to nginx!").
 
+![Verificando el deployment](images/web.png)
 ---
 
 ## 11. Operaciones básicas sobre el Deployment
@@ -364,7 +366,6 @@ Debería mostrarse la página por defecto de Nginx ("Welcome to nginx!").
 ```bash
 kubectl get all -n demo-web
 ```
-![VMs en Proxmox](docs/img/proxmox-vms.png)
 
 ### 11.2. Escalar el Deployment
 
