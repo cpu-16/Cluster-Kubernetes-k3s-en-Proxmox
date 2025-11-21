@@ -290,7 +290,7 @@ kubectl get nodes --show-labels
 kubectl create namespace demo-web
 kubectl get namespaces
 ```
-![VMs en Proxmox](docs/img/proxmox-vms.png)
+![Primer namespace](images/namespaces.png)
 
 ### 9.2. Crear Deployment de Nginx
 ```bash
